@@ -5,10 +5,7 @@ import { promptFunFacts } from '../services/grokService'
 import { JsonObject } from '@prisma/client/runtime/library'
 
 export const createFunFact = async (req: Request, res: Response) => {
-    const languages = await prisma.language.findMany({
-        where: { isActive: true },
-    })
-    await generateFunFact(languages)
+    await generateFunFact()
     res.status(201).json({ message: 'Fun fact created' })
 }
 
@@ -26,7 +23,7 @@ export const generateGrokFunFact = async (req: Request, res: Response) => {
         })
     }
 
-    res.status(201).json({ message: 'Fun fact generated via Grok' })
+    res.status(201).json({ message: 'Facts generated via Grok' })
 }
 
 export const getAllFunFacts = async (req: Request, res: Response) => {

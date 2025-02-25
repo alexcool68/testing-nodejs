@@ -10,6 +10,7 @@ app.use('/api', funfactRoutes)
 app.use('/api/setting', settingRoutes)
 
 // Lancer la planification au démarrage
+console.log('Scheduling fun facts...')
 scheduleFunFacts()
 
 export default app

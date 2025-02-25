@@ -1,4 +1,6 @@
 import prisma from '../config/database'
+import { JsonObject } from '@prisma/client/runtime/library'
+import { promptFunFacts } from './grokService'
 
 // Liste de fun facts de base (à enrichir ou remplacer par une API externe)
 const funFactBase = [
@@ -7,24 +9,17 @@ const funFactBase = [
     // ...
 ]
 
-export const generateFunFact = async (languages: { code: string }[]) => {
-    const randomFact =
-        funFactBase[Math.floor(Math.random() * funFactBase.length)]
-
-    // Simulation de traduction (à remplacer par un vrai service de traduction)
-    const translations = languages.reduce(
-        (acc, lang) => ({
-            ...acc,
-            [lang.code]: `${randomFact} (${lang.code})`,
-        }),
-        {}
-    )
-
-    await prisma.fact.create({
-        data: {
-            content: translations,
-        },
+export const generateFunFact = async () => {
+    const languages = await prisma.language.findMany({
+        where: { isActive: true },
     })
+    const result: JsonObject = await promptFunFacts(languages)
+
+    if (result.length !== 0) {
+        await prisma.fact.create({
+            data: { content: result },
+        })
+    }
 }
 
 export const getFunFacts = async () => {
