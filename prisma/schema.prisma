@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Fact {
+  id          Int      @id @default(autoincrement())
+  content     Json     
+  createdAt   DateTime @default(now())
+  isPublished Boolean  @default(false)
+}
+
+model Language {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique // ex: "en", "fr", "es"
+  name     String  // "English", "French", "Spanish"
+  isActive Boolean @default(true)
+}

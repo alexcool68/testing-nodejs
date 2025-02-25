@@ -1,0 +1,141 @@
+import { PrismaClient } from '@prisma/client'
+import schedule from 'node-schedule'
+import axios from 'axios'
+import { z } from 'zod'
+import OpenAI from 'openai'
+import { zodResponseFormat } from 'openai/helpers/zod'
+import express from 'express'
+
+const client = new OpenAI({
+    apiKey: process.env['GROK_API_KEY'],
+    baseURL: 'https://api.x.ai/v1',
+})
+
+//INTERFACE
+interface FunFact {
+    language: string
+    content: string
+    createdAt?: Date
+}
+
+//CONFIGURATION
+// Langues supportées
+const languages = ['fr', 'en', 'es', 'de']
+const langList = languages.join(', ')
+
+//INITIALISATION
+// Prisma
+const prisma = new PrismaClient()
+
+// Configuration de l'API Grok
+const GROK_API_URL = 'https://api.x.ai/v1/chat/completions'
+const GROK_API_KEY = process.env.GROK_API_KEY || ''
+
+const grokResultJsonFormat = z.array(
+    z.object({
+        language: z.string().describe('Code of the language'),
+        content: z.string().describe('The content of the fact'),
+    })
+)
+
+// Fonction pour générer tous les fun facts en un seul appel
+async function generateFunFacts() {
+    try {
+        const response = await axios.post(
+            GROK_API_URL,
+            {
+                messages: [
+                    {
+                        role: 'system',
+                        content:
+                            'you are grok, you will give me answer that is fun and shot enough to be transform as a tiktok, respond by an array on json format',
+                    },
+                    {
+                        role: 'user',
+                        content: `Generate one fun fact and translate it for each of these languages: ${langList}. Return just an array with language codes as keys and fun facts as values that I can use to save it to a database.`,
+                    },
+                ],
+                response_format: zodResponseFormat(
+                    grokResultJsonFormat,
+                    'funFacts'
+                ),
+                languages: languages,
+                stream: false,
+                model: 'grok-2-1212',
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${GROK_API_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        )
+
+        const result: FunFact[] = JSON.parse(
+            response.data.choices[0].message.content
+        )
+        return result
+    } catch (error) {
+        console.error('Erreur lors de la génération des fun facts:', error)
+        return languages.reduce((acc: { [key: string]: string }, lang) => {
+            acc[lang] = `Erreur: Impossible de générer un fun fact en ${lang}`
+            return acc
+        }, {})
+    }
+}
+
+// Fonction pour sauvegarder un fun fact dans la base de données
+async function saveFunFact(
+    content: string,
+    language: string
+): Promise<FunFact | void> {
+    try {
+        const funFact: FunFact = await prisma.tiktok.create({
+            data: {
+                content,
+                language,
+                createdAt: new Date(),
+            },
+        })
+        console.log(`Fun fact sauvegardé (${language}): ${content}`)
+        return funFact
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error)
+    }
+}
+
+// Fonction principale pour générer et sauvegarder les fun facts
+async function generateDailyFunFacts() {
+    console.log('Génération des fun facts du jour...')
+
+    const funFacts = await generateFunFacts()
+
+    if (Array.isArray(funFacts)) {
+        funFacts.forEach(async (fact: FunFact) => {
+            console.log(`Langue: ${fact.language}, Fun Fact: ${fact.content}`)
+            if (languages.includes(fact.language)) {
+                await saveFunFact(fact.content, fact.language)
+            }
+        })
+    } else {
+        console.error('Expected funFacts to be an array')
+    }
+}
+
+// Planification : deux fois par jour (8h et 20h)
+const morningJob = schedule.scheduleJob('0 8 * * *', generateDailyFunFacts) // 8:00
+const eveningJob = schedule.scheduleJob('0 20 * * *', generateDailyFunFacts) // 20:00
+
+// Fonction pour démarrer l'application
+async function startApp() {
+    console.log('Application démarrée le', new Date())
+}
+
+// Gestion de la fermeture propre
+process.on('SIGINT', async () => {
+    await prisma.$disconnect()
+    process.exit(0)
+})
+
+// Démarrage de l'application
+startApp().catch(console.error)

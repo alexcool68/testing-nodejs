@@ -1,0 +1,40 @@
+{
+    "name": "generate-tiktok",
+    "version": "1.0.0",
+    "description": "",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "npx tsc",
+        "start": "ts-node src/server.ts",
+        "dev": "nodemon src/server.ts",
+        "prisma:init": "npx prisma init",
+        "prisma:generate": "prisma generate",
+        "prisma:migrate": "npx prisma migrate dev",
+        "seed": "ts-node prisma/seed.ts"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "devDependencies": {
+        "@types/express": "^5.0.0",
+        "@types/node": "^22.13.5",
+        "@types/node-schedule": "^2.1.7",
+        "concurrently": "^9.1.2",
+        "nodemon": "^3.1.9",
+        "prettier": "3.5.2",
+        "prisma": "^6.4.1",
+        "ts-node": "^10.9.2",
+        "tsx": "^4.19.3",
+        "typescript": "^5.7.3"
+    },
+    "dependencies": {
+        "@ai-sdk/xai": "^1.1.12",
+        "@prisma/client": "^6.4.1",
+        "axios": "^1.7.9",
+        "express": "^4.21.2",
+        "node-schedule": "^2.1.1",
+        "openai": "^4.85.4",
+        "zod": "^3.24.2"
+    }
+}
